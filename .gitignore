@@ -1,0 +1,35 @@
+# ── Dados brutos RAIS ────────────────────────────────────────────────────────
+*.txt
+*.TXT
+*.csv
+!requirements.txt
+
+# ── Saída Parquet e manifesto ────────────────────────────────────────────────
+*.parquet
+_manifest.json
+
+# ── Config local (caminhos da máquina) ──────────────────────────────────────
+.env
+monitor_state.json
+
+# ── Logs de execução ─────────────────────────────────────────────────────────
+*.log
+
+# ── Claude / Superpowers ─────────────────────────────────────────────────────
+.claude/
+CLAUDE.md
+docs/superpowers/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
