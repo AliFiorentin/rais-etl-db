@@ -210,24 +210,6 @@ df = duckdb.sql("""
 | Derivada | — | ano | int |
 | Derivada | — | uf | str |
 
-#### Vínculos — Colunas removidas
-
-| Coluna original | Motivo da remoção |
-|---|---|
-| Vl Rem Janeiro CC … Vl Rem Novembro CC (11 colunas) | Remuneração mensal com custo de capital — redundante e inconsistente entre anos |
-| Vl Rem Janeiro SC … Vl Rem Novembro SC (11 colunas) | Remuneração mensal sem custo de capital — mesmo problema |
-| Vl Remun Média (SM) | Valor em salários mínimos — derivável de `vl_remun_media_nom` |
-| Vl Remun Dezembro Nom | Redundante com `vl_ultima_remun_ano` na maioria dos casos |
-| Vl Remun Dezembro (SM) | Idem, em salários mínimos |
-| CNAE 95 Classe | Versão anterior da CNAE; substituída por CNAE 2.0 |
-| CBO 94 Ocupação | Versão anterior do CBO; substituída por CBO 2002 |
-| Número CTPS | Identificador administrativo, sem uso analítico |
-| Ind Vínculo Alvará | Indicador administrativo de baixo uso |
-| Tipo Salário | Substituído por `vl_salario_contratual` + `tipo_vinculo` |
-| Ind CEI Vinculado | Dado administrativo redundante com `cei_vinculado` |
-| Ind Estab Participa PAT | Indicador de programa (PAT) de baixo uso analítico |
-| Ind Atividade Ano | Informação derivável do vínculo ativo |
-
 ---
 
 ### Estabelecimentos — 23 colunas selecionadas (+ `ano` e `uf` derivadas)
@@ -260,14 +242,3 @@ df = duckdb.sql("""
 | Derivada | — | ano | int |
 | Derivada | — | uf | str |
 
-#### Estabelecimentos — Colunas removidas
-
-| Coluna original | Motivo da remoção |
-|---|---|
-| Complemento Logradouro | Dado textual livre, sem uso analítico padronizado |
-| Tipo Logradouro | Classificação administrativa redundante com endereço completo |
-| DDD Telefone / Telefone | Dado de contato, sem relevância analítica |
-| Ind Certif ISO 9000 | Indicador de certificação de baixo uso em análises laborais |
-| Ind Certif ISO 14001 | Idem |
-| Ind PAT PJ / Ind PAT PF / Ind PAT Terceiros / Ind Ativ PAT | Indicadores do Programa de Alimentação do Trabalhador — específicos demais para uso geral |
-| Outros indicadores administrativos | Campos de controle interno do MTE sem uso analítico direto |
