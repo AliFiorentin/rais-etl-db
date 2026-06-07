@@ -242,3 +242,8 @@ df = duckdb.sql("""
 | Derivada | — | ano | int |
 | Derivada | — | uf | str |
 
+---
+
+## Observação
+
+A base identificada da RAIS utilizada neste projeto foi obtida por meio da **Lei de Acesso à Informação (LAI)**. Nenhuma venda, cessão ou repasse dos dados a terceiros será realizado por parte do autor deste repositório.
