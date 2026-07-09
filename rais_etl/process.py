@@ -6,6 +6,7 @@ pyarrow para escrita Parquet particionada (compressão zstd).
 """
 
 from __future__ import annotations
+import csv
 import logging
 from pathlib import Path
 
@@ -41,9 +42,17 @@ def _get_schema(dataset: str) -> dict[str, ColSpec]:
 
 
 def _build_arrow_schema(col_schema: dict[str, ColSpec]) -> pa.Schema:
-    """Constrói o schema PyArrow canônico (colunas na ordem do config + ano + uf)."""
+    """Constrói o schema PyArrow canônico (colunas na ordem do config + ano + uf).
+
+    Vários aliases (layouts históricos e alternativos) podem apontar para o
+    mesmo nome canônico — cada nome entra uma única vez no schema de saída.
+    """
     fields = [pa.field("ano", pa.int32())]
+    seen_names: set[str] = set()
     for spec in col_schema.values():
+        if spec.name in seen_names:
+            continue
+        seen_names.add(spec.name)
         fields.append(pa.field(spec.name, _ARROW_TYPES.get(spec.dtype, pa.string())))
     fields.append(pa.field("uf", pa.string()))
     return pa.schema(fields)
@@ -85,9 +94,12 @@ def process_job(
         manifest.remove(job.dataset, job.ano, filename)
 
     # ── Lê o cabeçalho para verificar o schema ────────────────────────────
+    # Layout histórico (2014-2023): separador ";", sem aspas.
+    # Layout novo (a partir de 2024): CSV padrão com aspas, separador ",".
     with open(job.source, encoding="latin-1") as fh:
         raw_header = fh.readline().rstrip("\n").rstrip("\r")
-    file_headers = raw_header.split(";")
+    sep = ";" if ";" in raw_header else ","
+    file_headers = next(csv.reader([raw_header], delimiter=sep))
 
     report = check_file_schema(file_headers, col_schema)
     if report.missing_optional:
@@ -104,7 +116,7 @@ def process_job(
     try:
         chunks = pd.read_csv(
             job.source,
-            sep=";",
+            sep=sep,
             encoding="latin-1",
             dtype=str,
             chunksize=CHUNKSIZE,

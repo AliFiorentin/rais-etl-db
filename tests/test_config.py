@@ -1,6 +1,12 @@
 """Testes para config.py — mapeamento canônico de colunas."""
 import pytest
-from rais_etl.config import VINCULOS_SCHEMA, ESTAB_SCHEMA, ColSpec, resolve_column
+from rais_etl.config import (
+    VINCULOS_SCHEMA,
+    VINCULOS_ALT_ALIASES_2024,
+    ESTAB_SCHEMA,
+    ColSpec,
+    resolve_column,
+)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -52,8 +58,9 @@ class TestVinculosSchema:
             assert not alias.endswith(" SC"), f"Alias com SC encontrado: {alias}"
 
     def test_50_columns_total(self):
-        """Exatamente 50 colunas mapeadas nos vínculos (sem contar ano/uf derivados)."""
-        assert len(VINCULOS_SCHEMA) == 50
+        """Exatamente 50 colunas do layout historico (2014-2023), mais os aliases
+        do layout alternativo de 2024+ que apontam para os mesmos nomes canonicos."""
+        assert len(VINCULOS_SCHEMA) == 50 + len(VINCULOS_ALT_ALIASES_2024)
 
     def test_afastamento_cols_present(self):
         assert "Causa Afastamento 1" in VINCULOS_SCHEMA

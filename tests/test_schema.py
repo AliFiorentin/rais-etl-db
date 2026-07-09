@@ -1,7 +1,7 @@
 """Testes para schema.py — verificação de cabeçalhos dos arquivos TXT."""
 import pytest
 from pathlib import Path
-from rais_etl.config import VINCULOS_SCHEMA, ESTAB_SCHEMA
+from rais_etl.config import VINCULOS_SCHEMA, VINCULOS_ALT_ALIASES_2024, ESTAB_SCHEMA
 from rais_etl.schema import check_file_schema, SchemaReport
 
 
@@ -83,3 +83,37 @@ class TestCheckFileSchema:
     def test_report_not_ok_when_missing_required(self):
         report = check_file_schema(["PIS"], VINCULOS_SCHEMA)
         assert not report.is_ok
+
+
+@pytest.fixture()
+def vinculos_header_2024() -> list[str]:
+    """Cabeçalho no layout alternativo (a partir de 2024): aliases com sufixo
+    "- Código" para as colunas que têm forma alternativa, aliases originais
+    para as demais (PIS, CPF, Idade, etc. não mudaram de nome)."""
+    alt_by_name = {name: alias for alias, name in VINCULOS_ALT_ALIASES_2024.items()}
+    header = []
+    seen_names = set()
+    for alias, spec in VINCULOS_SCHEMA.items():
+        if spec.name in seen_names:
+            continue
+        seen_names.add(spec.name)
+        header.append(alt_by_name.get(spec.name, alias))
+    return header
+
+
+class TestCheckFileSchema2024Layout:
+    def test_no_missing_required_with_alt_aliases_only(self, vinculos_header_2024):
+        """Um arquivo 2024/2025 que só tem os aliases alternativos não deve
+        acusar colunas obrigatórias ausentes — os aliases históricos e os
+        alternativos representam a mesma coluna canônica."""
+        report = check_file_schema(vinculos_header_2024, VINCULOS_SCHEMA)
+        assert report.missing_required == []
+        assert report.is_ok
+
+    def test_historic_file_not_missing_alt_only_columns(self, vinculos_header_2014):
+        """Um arquivo histórico (2014) não deve acusar como ausentes as colunas
+        que só existem sob o alias alternativo — pois o alias histórico já as
+        cobre."""
+        report = check_file_schema(vinculos_header_2014, VINCULOS_SCHEMA)
+        alt_only_aliases = set(VINCULOS_ALT_ALIASES_2024.keys())
+        assert not (set(report.missing_required) & alt_only_aliases)

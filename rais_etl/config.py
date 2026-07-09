@@ -110,6 +110,62 @@ VINCULOS_SCHEMA: dict[str, ColSpec] = {
 
 assert len(VINCULOS_SCHEMA) == 50, f"Esperado 50, obtido {len(VINCULOS_SCHEMA)}"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Layout alternativo (a partir de 2024): CSV com aspas, cabeçalhos com sufixo
+# "- Código" e nomes reformulados (ex.: "Sexo - Código" em vez de
+# "Sexo Trabalhador"). Mapeia alias alternativo -> nome canônico já definido
+# em VINCULOS_SCHEMA acima, reaproveitando o ColSpec (mesmo dtype/optional).
+# ─────────────────────────────────────────────────────────────────────────────
+
+VINCULOS_ALT_ALIASES_2024: dict[str, str] = {
+    'Município - Código': 'municipio',
+    'Ind Vínculo Ativo 31/12 - Código': 'vinculo_ativo_3112',
+    'Tipo Vínculo - Código': 'tipo_vinculo',
+    'Motivo Desligamento - Código': 'motivo_desligamento',
+    'Mês Desligamento - Código': 'mes_desligamento',
+    'Tipo Admissão Trabalhador - Código': 'tipo_admissao',
+    'Escolaridade Após 2005 - Código': 'escolaridade',
+    'Sexo - Código': 'sexo',
+    'Nacionalidade - Código': 'nacionalidade',
+    'Raça Cor - Código': 'raca_cor',
+    'Ind Portador Defic - Código': 'ind_portador_defic',
+    'Tamanho Estabelecimento - Código': 'tamanho_estab',
+    'Natureza Jurídica - Código': 'natureza_juridica',
+    'Tipo Estabelecimento - Código': 'tipo_estab',
+    'Data Admissão': 'data_admissao',
+    'Vl Rem Média Nom': 'vl_remun_media_nom',
+    'Vl Últ Rem Ano': 'vl_ultima_remun_ano',
+    'Data Nascimento': 'data_nascimento',
+    'CBO 2002 Ocupação - Código': 'cbo_2002',
+    'CNAE 2.0 Classe - Código': 'cnae20_classe',
+    'CNAE 2.0 Subclasse - Codigo': 'cnae20_subclasse',
+    'Tipo Deficiência - Código': 'tipo_defic',
+    'Causa Afastamento 1 - Código': 'causa_afast_1',
+    'Dia Início Afastamento 1 - Código': 'dia_ini_af1',
+    'Mês Início Afastamento 1 - Código': 'mes_ini_af1',
+    'Dia Fim Afastamento 1 - Código': 'dia_fim_af1',
+    'Mês Fim Afastamento 1 - Código': 'mes_fim_af1',
+    'Causa Afastamento 2 - Código': 'causa_afast_2',
+    'Dia Início Afastamento 2 - Código': 'dia_ini_af2',
+    'Mês Início Afastamento 2 - Código': 'mes_ini_af2',
+    'Dia Fim Afastamento 2 - Código': 'dia_fim_af2',
+    'Mês Fim Afastamento 2 - Código': 'mes_fim_af2',
+    'Causa Afastamento 3 - Código': 'causa_afast_3',
+    'Dia Início Afastamento 3 - Código': 'dia_ini_af3',
+    'Mês Início Afastamento 3 - Código': 'mes_ini_af3',
+    'Dia Fim Afastamento 3 - Código': 'dia_fim_af3',
+    'Mês Fim Afastamento 3 - Código': 'mes_fim_af3',
+    'Dia Desligamento - Código': 'dia_desligamento',
+}
+
+_name_to_spec = {spec.name: spec for spec in VINCULOS_SCHEMA.values()}
+for _alt_alias, _canonical_name in VINCULOS_ALT_ALIASES_2024.items():
+    VINCULOS_SCHEMA[_alt_alias] = _name_to_spec[_canonical_name]
+
+assert len(VINCULOS_SCHEMA) == 50 + len(VINCULOS_ALT_ALIASES_2024), (
+    f"Esperado {50 + len(VINCULOS_ALT_ALIASES_2024)}, obtido {len(VINCULOS_SCHEMA)}"
+)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ESTABELECIMENTOS — 23 colunas selecionadas

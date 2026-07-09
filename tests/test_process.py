@@ -131,3 +131,73 @@ class TestProcessJobVinculos:
         entry2 = manifest.get_entry("vinculos", 2014, VINCULOS_AC2014.name)
         ts2 = entry2.processed_at
         assert ts2 > ts1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Layout alternativo (2024+): CSV com aspas/vírgula, cabeçalhos "- Código",
+# datas DD/MM/AAAA. Usa um arquivo sintético minúsculo (não depende de dados
+# reais em disco), cobrindo o pipeline ponta a ponta com process_job.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestProcessJobVinculos2024Layout:
+    @pytest.fixture()
+    def source_csv(self, tmp_path: Path) -> Path:
+        header = (
+            '"Município - Código","PIS","CPF","Nome Trabalhador","Data Nascimento",'
+            '"CNPJ / CEI","CNPJ Raiz","CEI Vinculado","Sexo - Código","Idade",'
+            '"Raça Cor - Código","Nacionalidade - Código","Escolaridade Após 2005 - Código",'
+            '"Ind Portador Defic - Código","Tipo Deficiência - Código",'
+            '"Ind Vínculo Ativo 31/12 - Código","Tipo Vínculo - Código",'
+            '"Tipo Admissão Trabalhador - Código","Data Admissão","Tempo Emprego",'
+            '"Motivo Desligamento - Código","Mês Desligamento - Código",'
+            '"Dia Desligamento - Código","Qtd Hora Contr","CBO 2002 Ocupação - Código",'
+            '"Natureza Jurídica - Código","Tamanho Estabelecimento - Código",'
+            '"Tipo Estabelecimento - Código","CNAE 2.0 Classe - Código",'
+            '"CNAE 2.0 Subclasse - Codigo","Vl Rem Média Nom","Vl Salário Contratual",'
+            '"Vl Últ Rem Ano","Causa Afastamento 1 - Código","Qtd Dias Afastamento",'
+            '"Razão Social","Município Trab - Código"\n'
+        )
+        row = (
+            '"430543","12592585003","65543939272","MARIA TESTE","31/05/1965",'
+            '"02263250000140","02263250","000000000000","01","049","09","10","01",'
+            '"0","00","1","10","02","02/06/2024","5.9","00","00","00","44","715110",'
+            '"2062","04","01","43134","4313400","1125.29","1125.29","37.51","99",'
+            '"000","PREFEITURA TESTE","430543"\n'
+        )
+        path = tmp_path / "RAIS_VINC_ID_SUL.txt"
+        path.write_text(header + row, encoding="latin-1")
+        return path
+
+    @pytest.fixture()
+    def output_dir(self, tmp_path: Path) -> Path:
+        return tmp_path / "rais_db"
+
+    @pytest.fixture()
+    def manifest(self, output_dir: Path) -> Manifest:
+        return Manifest(output_dir / "_manifest.json")
+
+    @pytest.fixture()
+    def job(self, source_csv: Path) -> RaisJob:
+        return RaisJob(dataset="vinculos", ano=2024, source=source_csv, uf_hint=None)
+
+    def test_no_duplicate_columns(self, job, output_dir, manifest):
+        """Regressão: aliases alternativos não devem duplicar colunas no Parquet."""
+        process_job(job, output_dir=output_dir, manifest=manifest)
+        parquets = list((output_dir / "vinculos").rglob("*.parquet"))
+        schema = pq.read_schema(parquets[0])
+        assert len(schema.names) == len(set(schema.names))
+        assert len(schema.names) == 52  # 50 colunas + ano + uf
+
+    def test_municipio_and_uf_resolved(self, job, output_dir, manifest):
+        process_job(job, output_dir=output_dir, manifest=manifest)
+        pattern = str(output_dir / "vinculos" / "**" / "*.parquet").replace("\\", "/")
+        con = duckdb.connect()
+        row = con.execute(
+            f"SELECT municipio, uf, data_nascimento, data_admissao, vl_remun_media_nom "
+            f"FROM read_parquet('{pattern}', hive_partitioning=true)"
+        ).fetchone()
+        assert row[0] == "430543"
+        assert str(row[1]) == "43"
+        assert str(row[2]) == "1965-05-31"
+        assert str(row[3]) == "2024-06-02"
+        assert abs(row[4] - 1125.29) < 0.01

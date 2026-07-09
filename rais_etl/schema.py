@@ -34,14 +34,25 @@ def check_file_schema(
     file_set = {h.strip() for h in file_headers}
     schema_set = set(schema.keys())
 
-    missing_required = [
-        alias for alias, spec in schema.items()
-        if alias not in file_set and not spec.optional
-    ]
-    missing_optional = [
-        alias for alias, spec in schema.items()
-        if alias not in file_set and spec.optional
-    ]
+    # Múltiplos aliases (layouts históricos e alternativos) podem apontar para o
+    # mesmo nome canônico (ColSpec.name) — uma coluna só está "ausente" se
+    # NENHUM dos seus aliases aparecer no arquivo.
+    aliases_by_name: dict[str, list[str]] = {}
+    for alias, spec in schema.items():
+        aliases_by_name.setdefault(spec.name, []).append(alias)
+
+    missing_required = []
+    missing_optional = []
+    for name, aliases in aliases_by_name.items():
+        if any(alias in file_set for alias in aliases):
+            continue
+        spec = schema[aliases[0]]
+        primary_alias = aliases[0]
+        if spec.optional:
+            missing_optional.append(primary_alias)
+        else:
+            missing_required.append(primary_alias)
+
     unknown = [
         h.strip() for h in file_headers
         if h.strip() not in schema_set

@@ -54,10 +54,12 @@ def cast_column(series: pd.Series, dtype: str) -> pd.Series:
             v = str(val).strip()
             if v in NULL_DATE_VALUES or not v:
                 return pd.NaT
-            try:
-                return datetime.datetime.strptime(v, "%d%m%Y").date()
-            except (ValueError, TypeError):
-                return pd.NaT
+            for fmt in ("%d%m%Y", "%d/%m/%Y"):
+                try:
+                    return datetime.datetime.strptime(v, fmt).date()
+                except (ValueError, TypeError):
+                    continue
+            return pd.NaT
 
         return series.apply(parse_date)
 
@@ -82,24 +84,23 @@ def select_and_rename(
     output: dict[str, pd.Series] = {}
     output["ano"] = pd.Series([ano] * len(df), dtype="int32")
 
-    for alias, spec in schema.items():
-        if alias in df.columns:
-            output[spec.name] = cast_column(df[alias], spec.dtype)
-        elif spec.optional:
-            if spec.dtype == "date":
-                output[spec.name] = pd.Series([pd.NaT] * len(df))
-            elif spec.dtype in ("int",):
-                output[spec.name] = pd.Series([pd.NA] * len(df), dtype="Int64")
-            else:
-                output[spec.name] = pd.Series([None] * len(df), dtype=object)
+    # Vários aliases (layouts históricos e alternativos) podem apontar para o
+    # mesmo nome canônico — resolve por nome uma única vez, priorizando o
+    # primeiro alias presente no arquivo, para não sobrescrever com nulo.
+    for name in dict.fromkeys(spec.name for spec in schema.values()):
+        spec = next(s for s in schema.values() if s.name == name)
+        alias = next(
+            (a for a, s in schema.items() if s.name == name and a in df.columns),
+            None,
+        )
+        if alias is not None:
+            output[name] = cast_column(df[alias], spec.dtype)
+        elif spec.dtype == "date":
+            output[name] = pd.Series([pd.NaT] * len(df))
+        elif spec.dtype == "int":
+            output[name] = pd.Series([pd.NA] * len(df), dtype="Int64")
         else:
-            # Coluna obrigatória ausente — preenche com nulo e continua
-            if spec.dtype == "date":
-                output[spec.name] = pd.Series([pd.NaT] * len(df))
-            elif spec.dtype in ("int",):
-                output[spec.name] = pd.Series([pd.NA] * len(df), dtype="Int64")
-            else:
-                output[spec.name] = pd.Series([None] * len(df), dtype=object)
+            output[name] = pd.Series([None] * len(df), dtype=object)
 
     result = pd.DataFrame(output)
 

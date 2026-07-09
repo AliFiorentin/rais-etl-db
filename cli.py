@@ -26,6 +26,7 @@ Configuração:
 """
 
 import argparse
+import csv
 import logging
 import os
 import sys
@@ -76,7 +77,9 @@ def cmd_verify_schema(args) -> int:
 
     for job in sorted(jobs, key=lambda j: (j.dataset, j.ano, j.source.name)):
         with open(job.source, encoding="latin-1") as fh:
-            headers = fh.readline().rstrip("\n\r").split(";")
+            raw_header = fh.readline().rstrip("\n\r")
+        sep = ";" if ";" in raw_header else ","
+        headers = next(csv.reader([raw_header], delimiter=sep))
         report = check_file_schema(headers, schemas[job.dataset])
 
         if not report.is_ok:

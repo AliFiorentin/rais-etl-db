@@ -94,6 +94,13 @@ class TestCastColumn:
         result = cast_column(s, "date")
         assert pd.isna(result.iloc[0])
 
+    def test_date_slash_format(self):
+        """Layout 2024+ usa datas DD/MM/AAAA em vez de DDMMAAAA."""
+        s = pd.Series(["02/06/2024", "31/05/1965"])
+        result = cast_column(s, "date")
+        assert result.iloc[0] == datetime.date(2024, 6, 2)
+        assert result.iloc[1] == datetime.date(1965, 5, 31)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # select_and_rename — aplica schema a um DataFrame lido do CSV
@@ -250,3 +257,102 @@ class TestSelectAndRename:
         }])
         result = select_and_rename(df, VINCULOS_SCHEMA, ano=2018)
         assert result["razao_social"].iloc[0] == "EMPRESA TESTE LTDA"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Layout alternativo (2024+): aliases com sufixo "- Código" e datas DD/MM/AAAA
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture()
+def df_vinculos_2024() -> pd.DataFrame:
+    """DataFrame mínimo simulando saída de pd.read_csv no RAIS_VINC_ID_SUL.txt
+    de 2024/2025 (colunas renomeadas, datas DD/MM/AAAA)."""
+    return pd.DataFrame([{
+        "Município - Código":              "430543",
+        "PIS":                             "12592585003",
+        "CPF":                             "65543939272",
+        "Nome Trabalhador":                "MARIA DA SILVA                                         ",
+        "Data Nascimento":                 "31/05/1965",
+        "CNPJ / CEI":                      "02263250000140",
+        "CNPJ Raiz":                       "02263250",
+        "CEI Vinculado":                   "000000000000",
+        "Sexo - Código":                   "01",
+        "Idade":                           "049",
+        "Raça Cor - Código":               "09",
+        "Nacionalidade - Código":          "10",
+        "Escolaridade Após 2005 - Código": "01",
+        "Ind Portador Defic - Código":     "0",
+        "Tipo Deficiência - Código":       "00",
+        "Ind Vínculo Ativo 31/12 - Código":"1",
+        "Tipo Vínculo - Código":           "10",
+        "Tipo Admissão Trabalhador - Código": "02",
+        "Data Admissão":                   "02/06/2024",
+        "Tempo Emprego":                   "5.9",
+        "Motivo Desligamento - Código":    "00",
+        "Mês Desligamento - Código":       "00",
+        "Dia Desligamento - Código":       "00",
+        "Qtd Hora Contr":                  "44",
+        "CBO 2002 Ocupação - Código":      "715110",
+        "Natureza Jurídica - Código":      "2062",
+        "Tamanho Estabelecimento - Código":"04",
+        "Tipo Estabelecimento - Código":   "01",
+        "CNAE 2.0 Classe - Código":        "43134",
+        "CNAE 2.0 Subclasse - Codigo":     "4313400",
+        "Vl Rem Média Nom":                "1125.29",
+        "Vl Salário Contratual":           "1125.29",
+        "Vl Últ Rem Ano":                  "37.51",
+        "Causa Afastamento 1 - Código":    "99",
+        "Dia Início Afastamento 1 - Código": "99",
+        "Mês Início Afastamento 1 - Código": "99",
+        "Dia Fim Afastamento 1 - Código":  "99",
+        "Mês Fim Afastamento 1 - Código":  "99",
+        "Causa Afastamento 2 - Código":    "99",
+        "Dia Início Afastamento 2 - Código": "99",
+        "Mês Início Afastamento 2 - Código": "99",
+        "Dia Fim Afastamento 2 - Código":  "99",
+        "Mês Fim Afastamento 2 - Código":  "99",
+        "Causa Afastamento 3 - Código":    "99",
+        "Dia Início Afastamento 3 - Código": "99",
+        "Mês Início Afastamento 3 - Código": "99",
+        "Dia Fim Afastamento 3 - Código":  "99",
+        "Mês Fim Afastamento 3 - Código":  "99",
+        "Qtd Dias Afastamento":            "000",
+        "Razão Social":                    "PREFEITURA TESTE",
+        # colunas extras/desconhecidas do layout novo, devem ser descartadas
+        "Município Trab - Código":        "430543",
+        "Ano Chegada Brasil":              "0",
+    }])
+
+
+class TestSelectAndRename2024Layout:
+    def test_canonical_column_names(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert "cpf" in result.columns
+        assert "municipio" in result.columns
+        assert "vl_remun_media_nom" in result.columns
+
+    def test_municipio_resolved_from_alt_alias(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert result["municipio"].iloc[0] == "430543"
+
+    def test_uf_derived(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert result["uf"].iloc[0] == "43"
+
+    def test_date_admissao_slash_format_parsed(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert result["data_admissao"].iloc[0] == datetime.date(2024, 6, 2)
+
+    def test_date_nascimento_slash_format_parsed(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert result["data_nascimento"].iloc[0] == datetime.date(1965, 5, 31)
+
+    def test_remuneracao_resolved_from_alt_alias(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert abs(result["vl_remun_media_nom"].iloc[0] - 1125.29) < 0.01
+        assert abs(result["vl_ultima_remun_ano"].iloc[0] - 37.51) < 0.01
+
+    def test_unmapped_new_columns_dropped(self, df_vinculos_2024):
+        result = select_and_rename(df_vinculos_2024, VINCULOS_SCHEMA, ano=2024)
+        assert "municipio_trab_-_codigo" not in result.columns
+        assert not any("Trab" in col for col in result.columns)
