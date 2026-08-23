@@ -141,7 +141,7 @@ def process_job(
 
                 part_dir = dataset_dir / f"ano={job.ano}" / f"uf={uf_str}"
                 part_dir.mkdir(parents=True, exist_ok=True)
-                part_file = part_dir / f"{filename.replace('.txt', '')}.parquet"
+                part_file = part_dir / f"{Path(filename).stem}.parquet"
 
                 if part_file not in writer_map:
                     writer_map[part_file] = pq.ParquetWriter(

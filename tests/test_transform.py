@@ -59,6 +59,24 @@ class TestCastColumn:
         result = cast_column(s, "int")
         assert result.iloc[0] == 7
 
+    def test_int_discards_out_of_range_instead_of_raising(self):
+        """Dado sujo (ex.: layout .COMT de 2025) pode trazer valores fora do
+        range de int32 num campo teoricamente inteiro (ex.: "Num Logradouro"
+        com "9.5e+108") — deve virar NULL, não estourar exceção no cast."""
+        s = pd.Series(["407", "9.5e108", "-99999999999"])
+        result = cast_column(s, "int")
+        assert result.iloc[0] == 407
+        assert pd.isna(result.iloc[1])
+        assert pd.isna(result.iloc[2])
+
+    def test_int_discards_non_integer_values(self):
+        """Valores fracionários num campo inteiro (ex.: "Num Logradouro" com
+        "3.92") viram NULL em vez de propagar um float truncado."""
+        s = pd.Series(["407", "3.92"])
+        result = cast_column(s, "int")
+        assert result.iloc[0] == 407
+        assert pd.isna(result.iloc[1])
+
     def test_double_comma_decimal(self):
         s = pd.Series(["0000001125,29", "0001125,29", ""])
         result = cast_column(s, "double")

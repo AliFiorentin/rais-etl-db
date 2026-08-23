@@ -37,7 +37,13 @@ def cast_column(series: pd.Series, dtype: str) -> pd.Series:
 
     if dtype == "int":
         cleaned = series.astype(str).str.strip().replace("", pd.NA)
-        return pd.to_numeric(cleaned, errors="coerce").astype("Int64")
+        numeric = pd.to_numeric(cleaned, errors="coerce")
+        # Descarta valores fora do range de int32 (saída Arrow) ou não-inteiros
+        # — dado sujo na origem (ex.: "Num Logradouro" com "9.5e+108" ou "3.92")
+        # vira NULL em vez de estourar exceção no cast final.
+        is_valid = numeric.between(-2_147_483_648, 2_147_483_647) & (numeric == numeric.round())
+        numeric = numeric.where(is_valid)
+        return numeric.astype("Int64")
 
     if dtype == "double":
         # Suporta tanto vírgula como ponto como separador decimal
