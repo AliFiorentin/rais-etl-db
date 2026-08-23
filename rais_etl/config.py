@@ -209,3 +209,33 @@ ESTAB_SCHEMA: dict[str, ColSpec] = {
 }
 
 assert len(ESTAB_SCHEMA) == 23, f"Esperado 23, obtido {len(ESTAB_SCHEMA)}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Layout alternativo (a partir de 2024, extensão .COMT): mesma convenção usada
+# em VINCULOS_ALT_ALIASES_2024 (sufixo "- Código"), mas para estabelecimentos
+# três campos também trocam de nome por completo (não é só sufixo):
+# "Logradouro do Estab", "Num Logradouro" e "Bairros - Nome".
+# ─────────────────────────────────────────────────────────────────────────────
+
+ESTAB_ALT_ALIASES_2024: dict[str, str] = {
+    'Município - Código': 'municipio',
+    'Natureza Jurídica - Código': 'natureza_juridica',
+    'Tamanho Estabelecimento - Código': 'tamanho_estab',
+    'Tipo Estabelecimento - Código': 'tipo_estab',
+    'IBGE Subsetor - Código': 'ibge_subsetor',
+    'CNAE 2.0 Classe - Código': 'cnae20_classe',
+    'CNAE 2.0 Subclasse - Codigo': 'cnae20_subclasse',
+    'Ind RAIS Negativa - Código': 'ind_rais_negativa',
+    'Ind Estab Participante SIMPLES - Código': 'ind_simples',
+    'Logradouro do Estab': 'nome_logradouro',
+    'Num Logradouro': 'numero_logradouro',
+    'Bairros - Nome': 'nome_bairro',
+}
+
+_estab_name_to_spec = {spec.name: spec for spec in ESTAB_SCHEMA.values()}
+for _estab_alt_alias, _estab_canonical_name in ESTAB_ALT_ALIASES_2024.items():
+    ESTAB_SCHEMA[_estab_alt_alias] = _estab_name_to_spec[_estab_canonical_name]
+
+assert len(ESTAB_SCHEMA) == 23 + len(ESTAB_ALT_ALIASES_2024), (
+    f"Esperado {23 + len(ESTAB_ALT_ALIASES_2024)}, obtido {len(ESTAB_SCHEMA)}"
+)

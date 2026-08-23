@@ -20,14 +20,17 @@ class RaisJob:
 
 # ── patterns ──────────────────────────────────────────────────────────────────
 
-# Estabelecimentos: Estb2014ID.txt
-_RE_ESTB = re.compile(r"^Estb(\d{4})ID\.txt$", re.IGNORECASE)
+# Extensões aceitas: .txt (histórico) e .comt (formato novo a partir de 2025)
+_SOURCE_EXTENSIONS = {".txt", ".comt"}
 
-# Vínculos por UF: AC2014ID.txt  (2 letras + 4 dígitos + ID.txt)
-_RE_VINC_UF = re.compile(r"^([A-Z]{2})(\d{4})ID\.txt$", re.IGNORECASE)
+# Estabelecimentos: Estb2014ID.txt / Estb2025ID.COMT
+_RE_ESTB = re.compile(r"^Estb(\d{4})ID\.(txt|comt)$", re.IGNORECASE)
 
-# Vínculos por região: RAIS_VINC_ID_NORTE.txt  /  RAIS_VINC_ID_SP.txt
-_RE_VINC_REG = re.compile(r"^RAIS_VINC_ID_.+\.txt$", re.IGNORECASE)
+# Vínculos por UF: AC2014ID.txt  (2 letras + 4 dígitos + ID.txt/.comt)
+_RE_VINC_UF = re.compile(r"^([A-Z]{2})(\d{4})ID\.(txt|comt)$", re.IGNORECASE)
+
+# Vínculos por região: RAIS_VINC_ID_NORTE.txt  /  RAIS_VINC_ID_SUL.COMT
+_RE_VINC_REG = re.compile(r"^RAIS_VINC_ID_.+\.(txt|comt)$", re.IGNORECASE)
 
 # Pasta de vínculos por ano: "RAIS 2014"
 _RE_VINC_DIR = re.compile(r"^RAIS\s+(\d{4})$", re.IGNORECASE)
@@ -47,7 +50,7 @@ def _scan_estabelecimentos(base_dir: Path) -> list[RaisJob]:
         return []
     result = []
     for f in estb_dir.iterdir():
-        if f.suffix.lower() != ".txt":
+        if f.suffix.lower() not in _SOURCE_EXTENSIONS:
             continue
         m = _RE_ESTB.match(f.name)
         if m:
@@ -72,7 +75,9 @@ def _scan_vinculos(base_dir: Path) -> list[RaisJob]:
         if not m_dir:
             continue
         ano = int(m_dir.group(1))
-        for f in pasta.rglob("*.txt"):
+        for f in pasta.rglob("*"):
+            if not f.is_file() or f.suffix.lower() not in _SOURCE_EXTENSIONS:
+                continue
             if _RE_VINC_UF.match(f.name):
                 uf = _RE_VINC_UF.match(f.name).group(1).upper()
                 result.append(RaisJob(dataset="vinculos", ano=ano, source=f, uf_hint=uf))

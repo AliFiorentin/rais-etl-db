@@ -4,6 +4,7 @@ from rais_etl.config import (
     VINCULOS_SCHEMA,
     VINCULOS_ALT_ALIASES_2024,
     ESTAB_SCHEMA,
+    ESTAB_ALT_ALIASES_2024,
     ColSpec,
     resolve_column,
 )
@@ -88,7 +89,9 @@ class TestEstabSchema:
         assert ESTAB_SCHEMA["CNPJ / CEI"].name == "cnpj_cei"
 
     def test_23_columns_total(self):
-        assert len(ESTAB_SCHEMA) == 23
+        """Exatamente 23 colunas do layout historico, mais os aliases do
+        layout novo (extensão .COMT, a partir de 2024)."""
+        assert len(ESTAB_SCHEMA) == 23 + len(ESTAB_ALT_ALIASES_2024)
 
     def test_removed_cols_absent(self):
         """Colunas removidas pelo usuário não devem constar no schema."""
